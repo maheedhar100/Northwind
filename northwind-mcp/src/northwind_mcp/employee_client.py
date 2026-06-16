@@ -72,15 +72,81 @@ class EmployeeClient:
             departments={str(key): int(value) for key, value in data.items()}
         )
 
+    async def add_employee(
+        self, name: str, email: str, department: str, salary: float
+    ) -> EmployeeResponse:
+        data = await self._request_json(
+            "POST",
+            "/api/employees",
+            json={
+                "name": name,
+                "email": email,
+                "department": normalize_department(department),
+                "salary": salary,
+            },
+        )
+        return EmployeeResponse(employee=Employee.model_validate(data))
+
+    async def update_employee(
+        self,
+        employee_id: int,
+        name: str,
+        email: str,
+        department: str,
+        salary: float,
+    ) -> EmployeeResponse:
+        data = await self._request_json(
+            "PUT",
+            f"/api/employees/{employee_id}",
+            json={
+                "name": name,
+                "email": email,
+                "department": normalize_department(department),
+                "salary": salary,
+            },
+        )
+        return EmployeeResponse(employee=Employee.model_validate(data))
+
+    async def deactivate_employee(self, employee_id: int) -> None:
+        await self._request_no_content("PATCH", f"/api/employees/{employee_id}/deactivate")
+
+    async def delete_employee(self, employee_id: int) -> None:
+        await self._request_no_content("DELETE", f"/api/employees/{employee_id}")
+
     async def _get_json(
         self, path: str, params: Mapping[str, Any] | None = None
+    ) -> Any:
+        return await self._request_json("GET", path, params=params)
+
+    async def _request_json(
+        self,
+        method: str,
+        path: str,
+        params: Mapping[str, Any] | None = None,
+        json: Mapping[str, Any] | None = None,
     ) -> Any:
         url = f"{self.base_url}{path}"
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, params=params)
+                response = await client.request(method, url, params=params, json=json)
                 response.raise_for_status()
                 return response.json()
+        except httpx.HTTPStatusError as exc:
+            raise EmployeeApiError(
+                f"Employee API returned HTTP {exc.response.status_code} for {url}"
+            ) from exc
+        except httpx.RequestError as exc:
+            raise EmployeeApiError(
+                f"Could not connect to Employee API at {self.base_url}. "
+                "Start the Spring Boot app first."
+            ) from exc
+
+    async def _request_no_content(self, method: str, path: str) -> None:
+        url = f"{self.base_url}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.request(method, url)
+                response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             raise EmployeeApiError(
                 f"Employee API returned HTTP {exc.response.status_code} for {url}"

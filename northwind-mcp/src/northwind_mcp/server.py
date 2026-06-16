@@ -10,13 +10,23 @@ from northwind_mcp.tools import register_tools
 
 
 def create_server() -> FastMCP:
-    backend_url = os.getenv("NORTHWIND_BACKEND_URL", "http://localhost:8080")
+    backend_url = os.getenv(
+        "NORTHWIND_BACKEND_URL",
+        os.getenv("BACKEND_URL", "http://localhost:8080"),
+    )
     transport_note = (
-        "Bridge MCP tools to the local Spring Boot employee backend. "
-        "Set NORTHWIND_BACKEND_URL to point at another backend."
+        "Employee Management MCP Server. Bridges MCP tools to the local "
+        "Spring Boot employee backend. Set NORTHWIND_BACKEND_URL or BACKEND_URL "
+        "to point at another backend."
     )
 
-    mcp = FastMCP("Northwind MCP Demo", instructions=transport_note, json_response=True)
+    mcp = FastMCP(
+        "Employee Management",
+        instructions=transport_note,
+        port=int(os.getenv("MCP_PORT", "8000")),
+        streamable_http_path=os.getenv("MCP_STREAMABLE_HTTP_PATH", "/sse"),
+        json_response=True,
+    )
     employee_client = EmployeeClient(base_url=backend_url)
     intent_extractor = RuleBasedIntentExtractor()
     register_tools(mcp, employee_client, intent_extractor)
