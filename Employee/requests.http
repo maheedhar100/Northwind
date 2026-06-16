@@ -1,0 +1,33 @@
+### Create an employee
+POST http://localhost:8080/api/employees
+Content-Type: application/json
+
+{
+  "name": "Maheedhar",
+  "email": "mahee@example.com",
+  "department": "Engineering",
+  "salary": 90000
+}
+
+### Create another (different department)
+POST http://localhost:8080/api/employees
+Content-Type: application/json
+
+{
+  "name": "Arjun",
+  "email": "arjun@example.com",
+  "department": "Sales",
+  "salary": 60000
+}
+
+### Get all employees
+GET http://localhost:8080/api/employees
+
+### Search by department
+GET http://localhost:8080/api/employees/department/Engineering
+
+### Search by name (partial match)
+GET http://localhost:8080/api/employees/search?name=mahee
+
+### Salary range
+GET http://localhost:8080/api/employees/salary-range?min=50000&max=100000
