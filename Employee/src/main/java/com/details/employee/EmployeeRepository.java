@@ -7,7 +7,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     List<Employee> findByActiveTrue();
 
-    List<Employee> findByDepartment(String department);
+    List<Employee> findByDepartmentIgnoreCase(String department);
 
     List<Employee> findByNameContainingIgnoreCase(String name);
 
@@ -15,7 +15,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     List<Employee> findBySalaryGreaterThanOrderBySalaryDesc(double salary);
 }
-
 
 
 

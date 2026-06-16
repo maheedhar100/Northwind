@@ -15,6 +15,18 @@ from northwind_mcp.schemas import (
 )
 
 
+DEPARTMENT_ALIASES = {
+    "eng": "Engineering",
+    "engineering": "Engineering",
+    "sales": "Sales",
+    "hr": "HR",
+    "human resources": "HR",
+    "finance": "Finance",
+    "marketing": "Marketing",
+    "operations": "Operations",
+}
+
+
 class EmployeeApiError(RuntimeError):
     """Raised when the Spring Boot employee API cannot satisfy a request."""
 
@@ -39,7 +51,10 @@ class EmployeeClient:
         return EmployeeListResponse(employees=employees, count=len(employees))
 
     async def get_employees_by_department(self, department: str) -> EmployeeListResponse:
-        data = await self._get_json(f"/api/employees/department/{department}")
+        normalized_department = normalize_department(department)
+        data = await self._get_json(
+            f"/api/employees/department/{normalized_department}"
+        )
         employees = [Employee.model_validate(item) for item in data]
         return EmployeeListResponse(employees=employees, count=len(employees))
 
@@ -75,3 +90,11 @@ class EmployeeClient:
                 f"Could not connect to Employee API at {self.base_url}. "
                 "Start the Spring Boot app first."
             ) from exc
+
+
+def normalize_department(department: str) -> str:
+    cleaned = " ".join(department.strip().split())
+    alias = DEPARTMENT_ALIASES.get(cleaned.lower())
+    if alias:
+        return alias
+    return cleaned.title()

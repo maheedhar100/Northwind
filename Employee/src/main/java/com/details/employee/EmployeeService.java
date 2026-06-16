@@ -65,7 +65,7 @@ public class EmployeeService {
 
     // GET employees by department
     public List<Employee> getEmployeesByDepartment(String department) {
-        return employeeRepository.findByDepartment(department);
+        return employeeRepository.findByDepartmentIgnoreCase(department);
     }
 
     // SEARCH employees whose name contains the given string (case-insensitive)
