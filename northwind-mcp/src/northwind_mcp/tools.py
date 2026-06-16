@@ -95,5 +95,32 @@ async def _execute_extracted_intent(
 
     return {
         "intent": extraction.model_dump(mode="json"),
-        "result": result.model_dump(mode="json"),
+        "result": _apply_projection(result.model_dump(mode="json"), extraction.projection),
     }
+
+
+def _apply_projection(data: dict, projection: list[str]) -> dict:
+    if not projection:
+        return data
+
+    if "employee" in data and isinstance(data["employee"], dict):
+        return {
+            **data,
+            "employee": _project_record(data["employee"], projection),
+        }
+
+    if "employees" in data and isinstance(data["employees"], list):
+        return {
+            **data,
+            "employees": [
+                _project_record(employee, projection)
+                for employee in data["employees"]
+                if isinstance(employee, dict)
+            ],
+        }
+
+    return data
+
+
+def _project_record(record: dict, projection: list[str]) -> dict:
+    return {field: record[field] for field in projection if field in record}

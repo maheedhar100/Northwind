@@ -15,16 +15,42 @@ KNOWN_DEPARTMENTS = {
     "operations": "Operations",
 }
 
+FIELD_KEYWORDS = {
+    "id": ("id", "employee id", "employee number"),
+    "name": ("name", "names", "who"),
+    "email": ("email", "mail", "email address"),
+    "department": ("department", "team"),
+    "role": ("role", "title", "job"),
+    "location": ("location", "located", "where"),
+    "hireDate": ("hire date", "hired", "joining date", "join date"),
+    "salary": (
+        "salary",
+        "salaries",
+        "pay",
+        "compensation",
+        "earn",
+        "earns",
+        "earning",
+        "earnings",
+        "wage",
+        "wages",
+        "income",
+    ),
+    "active": ("active", "inactive", "status"),
+}
+
 
 class RuleBasedIntentExtractor:
     def extract(self, question: str) -> IntentExtraction:
         normalized = " ".join(question.lower().strip().split())
+        projection = self._extract_projection(normalized)
 
         employee_id = self._extract_employee_id(normalized)
         if employee_id is not None:
             return IntentExtraction(
                 intent="get_employee",
                 entities={"employee_id": employee_id},
+                projection=projection,
                 confidence=0.9,
                 explanation="Found an employee id in the question.",
             )
@@ -60,6 +86,7 @@ class RuleBasedIntentExtractor:
             return IntentExtraction(
                 intent="get_employees_by_department",
                 entities={"department": department},
+                projection=projection,
                 confidence=0.82,
                 explanation="Found a known department in the question.",
             )
@@ -69,6 +96,7 @@ class RuleBasedIntentExtractor:
             return IntentExtraction(
                 intent="search_employees",
                 entities={"name": name},
+                projection=projection,
                 confidence=0.65,
                 explanation="Found a likely employee name search phrase.",
             )
@@ -109,3 +137,24 @@ class RuleBasedIntentExtractor:
                 if name and name not in {"employees", "employee"}:
                     return name.title()
         return None
+
+    def _extract_projection(self, text: str) -> list[str]:
+        fields = [
+            field
+            for field, keywords in FIELD_KEYWORDS.items()
+            if any(keyword in text for keyword in keywords)
+        ]
+
+        if "how much" in text and "salary" not in fields:
+            fields.append("salary")
+
+        if "salary" in fields and "name" not in fields:
+            fields.insert(0, "name")
+        if "email" in fields and "name" not in fields:
+            fields.insert(0, "name")
+        if "role" in fields and "name" not in fields:
+            fields.insert(0, "name")
+        if "location" in fields and "name" not in fields:
+            fields.insert(0, "name")
+
+        return fields
