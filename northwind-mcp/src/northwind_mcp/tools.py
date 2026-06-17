@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from mcp.server.fastmcp import FastMCP
 
 from northwind_mcp.employee_client import EmployeeApiError, EmployeeClient
@@ -11,6 +13,8 @@ def register_tools(
     mcp: FastMCP,
     employee_client: EmployeeClient,
     intent_extractor: RuleBasedIntentExtractor,
+    enable_write_tools: bool = False,
+    admin_token: str | None = None,
 ) -> None:
     @mcp.tool()
     async def get_employee(employee_id: int) -> dict:
@@ -66,58 +70,65 @@ def register_tools(
         extraction = intent_extractor.extract(question)
         return await _execute_extracted_intent(extraction, employee_client)
 
-    @mcp.tool()
-    async def add_employee(
-        name: str,
-        email: str,
-        department: str,
-        salary: float,
-    ) -> dict:
-        """Create a new employee record after the user confirms the details."""
-        result = await employee_client.add_employee(name, email, department, salary)
-        return {
-            "message": f"Added employee {result.employee.name}.",
-            **result.model_dump(mode="json"),
-        }
+    if enable_write_tools:
+        @mcp.tool()
+        async def add_employee(
+            name: str,
+            email: str,
+            department: str,
+            salary: float,
+            admin_token: str,
+        ) -> dict:
+            """Create a new employee record. Requires a valid admin token."""
+            _require_admin(admin_token, expected_token=register_tools_admin_token)
+            result = await employee_client.add_employee(name, email, department, salary)
+            return {
+                "message": f"Added employee {result.employee.name}.",
+                **result.model_dump(mode="json"),
+            }
 
-    @mcp.tool()
-    async def update_employee(
-        employee_id: int,
-        name: str,
-        email: str,
-        department: str,
-        salary: float,
-    ) -> dict:
-        """Update an existing employee record after the user confirms all fields."""
-        result = await employee_client.update_employee(
-            employee_id,
-            name,
-            email,
-            department,
-            salary,
-        )
-        return {
-            "message": f"Updated employee {employee_id}.",
-            **result.model_dump(mode="json"),
-        }
+        @mcp.tool()
+        async def update_employee(
+            employee_id: int,
+            name: str,
+            email: str,
+            department: str,
+            salary: float,
+            admin_token: str,
+        ) -> dict:
+            """Update an existing employee record. Requires a valid admin token."""
+            _require_admin(admin_token, expected_token=register_tools_admin_token)
+            result = await employee_client.update_employee(
+                employee_id,
+                name,
+                email,
+                department,
+                salary,
+            )
+            return {
+                "message": f"Updated employee {employee_id}.",
+                **result.model_dump(mode="json"),
+            }
 
-    @mcp.tool()
-    async def deactivate_employee(employee_id: int) -> dict:
-        """Soft-delete an employee by marking the employee inactive."""
-        await employee_client.deactivate_employee(employee_id)
-        return {
-            "employee_id": employee_id,
-            "message": "Employee has been deactivated.",
-        }
+        @mcp.tool()
+        async def deactivate_employee(employee_id: int, admin_token: str) -> dict:
+            """Soft-delete an employee by marking inactive. Requires a valid admin token."""
+            _require_admin(admin_token, expected_token=register_tools_admin_token)
+            await employee_client.deactivate_employee(employee_id)
+            return {
+                "employee_id": employee_id,
+                "message": "Employee has been deactivated.",
+            }
 
-    @mcp.tool()
-    async def delete_employee(employee_id: int) -> dict:
-        """Permanently delete an employee. Only use after explicit user confirmation."""
-        await employee_client.delete_employee(employee_id)
-        return {
-            "employee_id": employee_id,
-            "message": "Employee has been permanently deleted.",
-        }
+        @mcp.tool()
+        async def delete_employee(employee_id: int, admin_token: str) -> dict:
+            """Permanently delete an employee. Requires a valid admin token."""
+            _require_admin(admin_token, expected_token=register_tools_admin_token)
+            await employee_client.delete_employee(employee_id)
+            return {
+                "employee_id": employee_id,
+                "message": "Employee has been permanently deleted.",
+            }
 
     @mcp.resource("employees://all")
     async def resource_all_employees() -> str:
@@ -198,6 +209,8 @@ Follow these steps in order:
 
 If the user provides all details upfront, confirm once before calling add_employee()."""
 
+    register_tools_admin_token = admin_token
+
 
 async def _execute_extracted_intent(
     extraction: IntentExtraction, employee_client: EmployeeClient
@@ -256,6 +269,13 @@ def _apply_projection(data: dict, projection: list[str]) -> dict:
 
 def _project_record(record: dict, projection: list[str]) -> dict:
     return {field: record[field] for field in projection if field in record}
+
+
+def _require_admin(provided_token: str, expected_token: str | None) -> None:
+    if not expected_token:
+        raise PermissionError("Write tools are enabled, but MCP_ADMIN_TOKEN is not set.")
+    if not secrets.compare_digest(provided_token, expected_token):
+        raise PermissionError("Invalid admin token.")
 
 
 def _format_employee(employee: dict) -> str:
