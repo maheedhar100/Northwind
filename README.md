@@ -55,3 +55,36 @@ Inspector connection:
 Transport: Streamable HTTP
 URL: http://localhost:8000/sse
 ```
+
+## Terminal 4: Local Qwen/Ollama
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+If Ollama is not already running:
+
+```bash
+ollama serve
+```
+
+Read question:
+
+```bash
+cd Northwind/northwind-mcp
+source .venv/bin/activate
+
+python examples/qwen_ollama_mcp_test.py "How much does the sales employee earn?"
+```
+
+Admin write test:
+
+```bash
+cd Northwind/northwind-mcp
+source .venv/bin/activate
+
+python examples/qwen_ollama_mcp_test.py \
+  --tool add_employee \
+  --admin-token "demo-admin-123" \
+  --args '{"name":"Priya Rao","email":"priya@example.com","department":"Sales","salary":72000}'
+```
