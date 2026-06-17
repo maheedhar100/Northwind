@@ -1,4 +1,4 @@
-# Run The MCP POC
+# Run The MCP on Northwind
 
 ## Terminal 1: Backend
 
@@ -56,7 +56,7 @@ Transport: Streamable HTTP
 URL: http://localhost:8000/sse
 ```
 
-## Terminal 4: Local Qwen/Ollama
+## QWEN INTEGRATION - Terminal 4: Local Qwen/Ollama
 
 ```bash
 ollama pull qwen2.5:7b
@@ -86,5 +86,5 @@ source .venv/bin/activate
 python examples/qwen_ollama_mcp_test.py \
   --tool add_employee \
   --admin-token "demo-admin-123" \
-  --args '{"name":"Priya Rao","email":"priya@example.com","department":"Sales","salary":72000}'
+  --args '{"name":"Kashvi","email":"kashvi@example.com","department":"Marketing","salary":25000}'
 ```
