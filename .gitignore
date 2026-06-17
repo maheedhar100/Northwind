@@ -10,3 +10,4 @@ frontend/dist/
 northwind-mcp/examples/
 northwind-mcp/.venv/
 northwind-mcp/.venv/lib
+.codex/
