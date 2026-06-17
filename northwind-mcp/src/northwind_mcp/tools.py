@@ -4,14 +4,14 @@ import secrets
 
 from mcp.server.fastmcp import FastMCP
 
-from northwind_mcp.employee_client import EmployeeApiError, EmployeeClient
+from northwind_mcp.employee_response import EmployeeApiError, employeeResponse
 from northwind_mcp.intent_extractor import RuleBasedIntentExtractor
 from northwind_mcp.schemas import IntentExtraction
 
 
 def register_tools(
     mcp: FastMCP,
-    employee_client: EmployeeClient,
+    employee_response: employeeResponse,
     intent_extractor: RuleBasedIntentExtractor,
     enable_write_tools: bool = False,
     admin_token: str | None = None,
@@ -19,43 +19,43 @@ def register_tools(
     @mcp.tool()
     async def get_employee(employee_id: int) -> dict:
         """Get one employee by employee id."""
-        result = await employee_client.get_employee(employee_id)
+        result = await employee_response.get_employee(employee_id)
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def list_employees() -> dict:
         """List all active employees."""
-        result = await employee_client.get_all_employees()
+        result = await employee_response.get_all_employees()
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def search_employees(name: str) -> dict:
         """Search employees by name."""
-        result = await employee_client.search_employees(name)
+        result = await employee_response.search_employees(name)
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def get_employees_by_department(department: str) -> dict:
         """Get employees in a department, such as Engineering or Sales."""
-        result = await employee_client.get_employees_by_department(department)
+        result = await employee_response.get_employees_by_department(department)
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def get_employee_count() -> dict:
         """Get the total number of employees."""
-        result = await employee_client.get_employee_count()
+        result = await employee_response.get_employee_count()
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def get_average_salary() -> dict:
         """Get the average employee salary."""
-        result = await employee_client.get_average_salary()
+        result = await employee_response.get_average_salary()
         return result.model_dump(mode="json")
 
     @mcp.tool()
     async def get_employee_count_by_department() -> dict:
         """Get employee counts grouped by department."""
-        result = await employee_client.get_employee_count_by_department()
+        result = await employee_response.get_employee_count_by_department()
         return result.model_dump(mode="json")
 
     @mcp.tool()
@@ -68,7 +68,7 @@ def register_tools(
     async def execute_business_request(question: str) -> dict:
         """Extract intent from a question and execute the matching employee tool."""
         extraction = intent_extractor.extract(question)
-        return await _execute_extracted_intent(extraction, employee_client)
+        return await _execute_extracted_intent(extraction, employee_response)
 
     if enable_write_tools:
         @mcp.tool()
@@ -81,7 +81,7 @@ def register_tools(
         ) -> dict:
             """Create a new employee record. Requires a valid admin token."""
             _require_admin(admin_token, expected_token=register_tools_admin_token)
-            result = await employee_client.add_employee(name, email, department, salary)
+            result = await employee_response.add_employee(name, email, department, salary)
             return {
                 "message": f"Added employee {result.employee.name}.",
                 **result.model_dump(mode="json"),
@@ -98,7 +98,7 @@ def register_tools(
         ) -> dict:
             """Update an existing employee record. Requires a valid admin token."""
             _require_admin(admin_token, expected_token=register_tools_admin_token)
-            result = await employee_client.update_employee(
+            result = await employee_response.update_employee(
                 employee_id,
                 name,
                 email,
@@ -114,7 +114,7 @@ def register_tools(
         async def deactivate_employee(employee_id: int, admin_token: str) -> dict:
             """Soft-delete an employee by marking inactive. Requires a valid admin token."""
             _require_admin(admin_token, expected_token=register_tools_admin_token)
-            await employee_client.deactivate_employee(employee_id)
+            await employee_response.deactivate_employee(employee_id)
             return {
                 "employee_id": employee_id,
                 "message": "Employee has been deactivated.",
@@ -124,7 +124,7 @@ def register_tools(
         async def delete_employee(employee_id: int, admin_token: str) -> dict:
             """Permanently delete an employee. Requires a valid admin token."""
             _require_admin(admin_token, expected_token=register_tools_admin_token)
-            await employee_client.delete_employee(employee_id)
+            await employee_response.delete_employee(employee_id)
             return {
                 "employee_id": employee_id,
                 "message": "Employee has been permanently deleted.",
@@ -134,7 +134,7 @@ def register_tools(
     async def resource_all_employees() -> str:
         """Read-only formatted snapshot of every active employee record."""
         try:
-            result = await employee_client.get_all_employees()
+            result = await employee_response.get_all_employees()
         except EmployeeApiError as exc:
             return f"Error: {exc}"
 
@@ -148,7 +148,7 @@ def register_tools(
     async def resource_employee_by_id(employee_id: str) -> str:
         """Read-only formatted details for one employee."""
         try:
-            result = await employee_client.get_employee(int(employee_id))
+            result = await employee_response.get_employee(int(employee_id))
         except ValueError:
             return f"Invalid employee ID '{employee_id}'."
         except EmployeeApiError as exc:
@@ -159,7 +159,7 @@ def register_tools(
     @mcp.resource("stats://summary")
     async def resource_stats_summary() -> str:
         """Read-only formatted workforce statistics snapshot."""
-        return await _format_statistics(employee_client)
+        return await _format_statistics(employee_response)
 
     @mcp.prompt()
     def department_report(department: str) -> str:
@@ -213,25 +213,25 @@ If the user provides all details upfront, confirm once before calling add_employ
 
 
 async def _execute_extracted_intent(
-    extraction: IntentExtraction, employee_client: EmployeeClient
+    extraction: IntentExtraction, employee_response: employeeResponse
 ) -> dict:
     intent = extraction.intent
     entities = extraction.entities
 
     if intent == "get_employee":
-        result = await employee_client.get_employee(int(entities["employee_id"]))
+        result = await employee_response.get_employee(int(entities["employee_id"]))
     elif intent == "search_employees":
-        result = await employee_client.search_employees(str(entities["name"]))
+        result = await employee_response.search_employees(str(entities["name"]))
     elif intent == "get_employees_by_department":
-        result = await employee_client.get_employees_by_department(
+        result = await employee_response.get_employees_by_department(
             str(entities["department"])
         )
     elif intent == "get_employee_count":
-        result = await employee_client.get_employee_count()
+        result = await employee_response.get_employee_count()
     elif intent == "get_average_salary":
-        result = await employee_client.get_average_salary()
+        result = await employee_response.get_average_salary()
     elif intent == "get_employee_count_by_department":
-        result = await employee_client.get_employee_count_by_department()
+        result = await employee_response.get_employee_count_by_department()
     else:
         return {
             "intent": extraction.model_dump(mode="json"),
@@ -306,11 +306,11 @@ def _format_employee(employee: dict) -> str:
     return "\n".join(parts) + "\n" + "-" * 30
 
 
-async def _format_statistics(employee_client: EmployeeClient) -> str:
+async def _format_statistics(employee_response: employeeResponse) -> str:
     try:
-        count = await employee_client.get_employee_count()
-        average_salary = await employee_client.get_average_salary()
-        by_department = await employee_client.get_employee_count_by_department()
+        count = await employee_response.get_employee_count()
+        average_salary = await employee_response.get_average_salary()
+        by_department = await employee_response.get_employee_count_by_department()
     except EmployeeApiError as exc:
         return f"Error: {exc}"
 

@@ -31,7 +31,7 @@ class EmployeeApiError(RuntimeError):
     """Raised when the Spring Boot employee API cannot satisfy a request."""
 
 
-class EmployeeClient:
+class employeeResponse:
     def __init__(self, base_url: str = "http://localhost:8080", timeout: float = 10.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
