@@ -29,7 +29,14 @@ def create_server() -> FastMCP:
     )
     employee_client = EmployeeClient(base_url=backend_url)
     intent_extractor = RuleBasedIntentExtractor()
-    register_tools(mcp, employee_client, intent_extractor)
+    register_tools(
+        mcp,
+        employee_client,
+        intent_extractor,
+        enable_write_tools=os.getenv("MCP_ENABLE_WRITE_TOOLS", "false").lower()
+        in {"1", "true", "yes", "on"},
+        admin_token=os.getenv("MCP_ADMIN_TOKEN"),
+    )
     return mcp
 
 
