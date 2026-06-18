@@ -10,14 +10,11 @@ from northwind_mcp.tools import register_tools
 
 
 def create_server() -> FastMCP:
-    backend_url = os.getenv(
-        "NORTHWIND_BACKEND_URL",
-        os.getenv("BACKEND_URL", "http://localhost:8080"),
-    )
+    backend_url = os.getenv("NORTHWIND_BACKEND_URL", "http://localhost:8080")
     transport_note = (
         "Employee Management MCP Server. Bridges MCP tools to the local "
-        "Spring Boot employee backend. Set NORTHWIND_BACKEND_URL or BACKEND_URL "
-        "to point at another backend."
+        "Spring Boot employee backend. Set NORTHWIND_BACKEND_URL to point at "
+        "another backend."
     )
 
     mcp = FastMCP(
